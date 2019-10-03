@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"sync"
 
 	"regexp"
 
@@ -27,11 +28,12 @@ const (
 type configType int
 
 type ConsulAlertClient struct {
-	api    *consulapi.Client
-	config *ConsulAlertConfig
+	api         *consulapi.Client
+	config      *ConsulAlertConfig
+	mutexConfig *sync.Mutex
 }
 
-func NewClient(address, dc, aclToken string) (*ConsulAlertClient, error) {
+func NewClient(address, dc, aclToken string, mutexConfig *sync.Mutex) (*ConsulAlertClient, error) {
 	config := consulapi.DefaultConfig()
 	config.Address = address
 	config.Datacenter = dc
@@ -40,8 +42,9 @@ func NewClient(address, dc, aclToken string) (*ConsulAlertClient, error) {
 	alertConfig := DefaultAlertConfig()
 
 	client := &ConsulAlertClient{
-		api:    api,
-		config: alertConfig,
+		api:         api,
+		config:      alertConfig,
+		mutexConfig: mutexConfig,
 	}
 
 	try := 1
@@ -79,187 +82,187 @@ func (c *ConsulAlertClient) LoadConfig() {
 			switch key {
 			// checks config
 			case "consul-alerts/config/checks/enabled":
-				valErr = loadCustomValue(&config.Checks.Enabled, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Checks.Enabled, val, ConfigTypeBool, c.mutexConfig)
 			case "consul-alerts/config/checks/change-threshold":
-				valErr = loadCustomValue(&config.Checks.ChangeThreshold, val, ConfigTypeInt)
+				valErr = loadCustomValue(&config.Checks.ChangeThreshold, val, ConfigTypeInt, c.mutexConfig)
 
 				// events config
 			case "consul-alerts/config/events/enabled":
-				valErr = loadCustomValue(&config.Events.Enabled, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Events.Enabled, val, ConfigTypeBool, c.mutexConfig)
 			case "consul-alerts/config/events/handlers":
-				valErr = loadCustomValue(&config.Events.Handlers, val, ConfigTypeStrArray)
+				valErr = loadCustomValue(&config.Events.Handlers, val, ConfigTypeStrArray, c.mutexConfig)
 
 				// email notifier config
 			case "consul-alerts/config/notifiers/email/cluster-name":
-				valErr = loadCustomValue(&config.Notifiers.Email.ClusterName, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Email.ClusterName, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/email/template":
-				valErr = loadCustomValue(&config.Notifiers.Email.Template, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Email.Template, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/email/enabled":
-				valErr = loadCustomValue(&config.Notifiers.Email.Enabled, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Notifiers.Email.Enabled, val, ConfigTypeBool, c.mutexConfig)
 			case "consul-alerts/config/notifiers/email/password":
-				valErr = loadCustomValue(&config.Notifiers.Email.Password, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Email.Password, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/email/port":
-				valErr = loadCustomValue(&config.Notifiers.Email.Port, val, ConfigTypeInt)
+				valErr = loadCustomValue(&config.Notifiers.Email.Port, val, ConfigTypeInt, c.mutexConfig)
 			case "consul-alerts/config/notifiers/email/receivers":
-				valErr = loadCustomValue(&config.Notifiers.Email.Receivers, val, ConfigTypeStrArray)
+				valErr = loadCustomValue(&config.Notifiers.Email.Receivers, val, ConfigTypeStrArray, c.mutexConfig)
 			case "consul-alerts/config/notifiers/email/sender-alias":
-				valErr = loadCustomValue(&config.Notifiers.Email.SenderAlias, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Email.SenderAlias, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/email/sender-email":
-				valErr = loadCustomValue(&config.Notifiers.Email.SenderEmail, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Email.SenderEmail, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/email/url":
-				valErr = loadCustomValue(&config.Notifiers.Email.Url, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Email.Url, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/email/username":
-				valErr = loadCustomValue(&config.Notifiers.Email.Username, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Email.Username, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/email/one-per-alert":
-				valErr = loadCustomValue(&config.Notifiers.Email.OnePerAlert, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Notifiers.Email.OnePerAlert, val, ConfigTypeBool, c.mutexConfig)
 			case "consul-alerts/config/notifiers/email/one-per-node":
-				valErr = loadCustomValue(&config.Notifiers.Email.OnePerNode, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Notifiers.Email.OnePerNode, val, ConfigTypeBool, c.mutexConfig)
 
 				// log notifier config
 			case "consul-alerts/config/notifiers/log/enabled":
-				valErr = loadCustomValue(&config.Notifiers.Log.Enabled, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Notifiers.Log.Enabled, val, ConfigTypeBool, c.mutexConfig)
 			case "consul-alerts/config/notifiers/log/path":
-				valErr = loadCustomValue(&config.Notifiers.Log.Path, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Log.Path, val, ConfigTypeString, c.mutexConfig)
 
 				// influxdb notifier config
 			case "consul-alerts/config/notifiers/influxdb/enabled":
-				valErr = loadCustomValue(&config.Notifiers.Influxdb.Enabled, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Notifiers.Influxdb.Enabled, val, ConfigTypeBool, c.mutexConfig)
 			case "consul-alerts/config/notifiers/influxdb/host":
-				valErr = loadCustomValue(&config.Notifiers.Influxdb.Host, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Influxdb.Host, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/influxdb/username":
-				valErr = loadCustomValue(&config.Notifiers.Influxdb.Username, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Influxdb.Username, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/influxdb/password":
-				valErr = loadCustomValue(&config.Notifiers.Influxdb.Password, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Influxdb.Password, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/influxdb/database":
-				valErr = loadCustomValue(&config.Notifiers.Influxdb.Database, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Influxdb.Database, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/influxdb/series-name":
-				valErr = loadCustomValue(&config.Notifiers.Influxdb.SeriesName, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Influxdb.SeriesName, val, ConfigTypeString, c.mutexConfig)
 
 				// slack notfier config
 			case "consul-alerts/config/notifiers/slack/enabled":
-				valErr = loadCustomValue(&config.Notifiers.Slack.Enabled, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Notifiers.Slack.Enabled, val, ConfigTypeBool, c.mutexConfig)
 			case "consul-alerts/config/notifiers/slack/cluster-name":
-				valErr = loadCustomValue(&config.Notifiers.Slack.ClusterName, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Slack.ClusterName, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/slack/url":
-				valErr = loadCustomValue(&config.Notifiers.Slack.Url, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Slack.Url, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/slack/channel":
-				valErr = loadCustomValue(&config.Notifiers.Slack.Channel, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Slack.Channel, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/slack/username":
-				valErr = loadCustomValue(&config.Notifiers.Slack.Username, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Slack.Username, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/slack/icon-url":
-				valErr = loadCustomValue(&config.Notifiers.Slack.IconUrl, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Slack.IconUrl, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/slack/icon-emoji":
-				valErr = loadCustomValue(&config.Notifiers.Slack.IconEmoji, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Slack.IconEmoji, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/slack/detailed":
-				valErr = loadCustomValue(&config.Notifiers.Slack.Detailed, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Notifiers.Slack.Detailed, val, ConfigTypeBool, c.mutexConfig)
 
 				// mattermost notfier config
 			case "consul-alerts/config/notifiers/mattermost/enabled":
-				valErr = loadCustomValue(&config.Notifiers.Mattermost.Enabled, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Notifiers.Mattermost.Enabled, val, ConfigTypeBool, c.mutexConfig)
 			case "consul-alerts/config/notifiers/mattermost/cluster-name":
-				valErr = loadCustomValue(&config.Notifiers.Mattermost.ClusterName, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Mattermost.ClusterName, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/mattermost/url":
-				valErr = loadCustomValue(&config.Notifiers.Mattermost.Url, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Mattermost.Url, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/mattermost/username":
-				valErr = loadCustomValue(&config.Notifiers.Mattermost.UserName, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Mattermost.UserName, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/mattermost/password":
-				valErr = loadCustomValue(&config.Notifiers.Mattermost.Password, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Mattermost.Password, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/mattermost/team":
-				valErr = loadCustomValue(&config.Notifiers.Mattermost.Team, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Mattermost.Team, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/mattermost/channel":
-				valErr = loadCustomValue(&config.Notifiers.Mattermost.Channel, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.Mattermost.Channel, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/mattermost/detailed":
-				valErr = loadCustomValue(&config.Notifiers.Mattermost.Detailed, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Notifiers.Mattermost.Detailed, val, ConfigTypeBool, c.mutexConfig)
 
 				// mattermost webhook notifier config
 			case "consul-alerts/config/notifiers/mattermost-webhook/enabled":
-				valErr = loadCustomValue(&config.Notifiers.MattermostWebhook.Enabled, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Notifiers.MattermostWebhook.Enabled, val, ConfigTypeBool, c.mutexConfig)
 			case "consul-alerts/config/notifiers/mattermost-webhook/cluster-name":
-				valErr = loadCustomValue(&config.Notifiers.MattermostWebhook.ClusterName, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.MattermostWebhook.ClusterName, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/mattermost-webhook/url":
-				valErr = loadCustomValue(&config.Notifiers.MattermostWebhook.Url, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.MattermostWebhook.Url, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/mattermost-webhook/channel":
-				valErr = loadCustomValue(&config.Notifiers.MattermostWebhook.Channel, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.MattermostWebhook.Channel, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/mattermost-webhook/username":
-				valErr = loadCustomValue(&config.Notifiers.MattermostWebhook.Username, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.MattermostWebhook.Username, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/mattermost-webhook/icon-url":
-				valErr = loadCustomValue(&config.Notifiers.MattermostWebhook.IconUrl, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.MattermostWebhook.IconUrl, val, ConfigTypeString, c.mutexConfig)
 
 				// pager-duty notfier config
 			case "consul-alerts/config/notifiers/pagerduty/enabled":
-				valErr = loadCustomValue(&config.Notifiers.PagerDuty.Enabled, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Notifiers.PagerDuty.Enabled, val, ConfigTypeBool, c.mutexConfig)
 			case "consul-alerts/config/notifiers/pagerduty/service-key":
-				valErr = loadCustomValue(&config.Notifiers.PagerDuty.ServiceKey, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.PagerDuty.ServiceKey, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/pagerduty/client-name":
-				valErr = loadCustomValue(&config.Notifiers.PagerDuty.ClientName, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.PagerDuty.ClientName, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/pagerduty/client-url":
-				valErr = loadCustomValue(&config.Notifiers.PagerDuty.ClientUrl, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.PagerDuty.ClientUrl, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/pagerduty/max-retry":
-				valErr = loadCustomValue(&config.Notifiers.PagerDuty.MaxRetry, val, ConfigTypeInt)
+				valErr = loadCustomValue(&config.Notifiers.PagerDuty.MaxRetry, val, ConfigTypeInt, c.mutexConfig)
 			case "consul-alerts/config/notifiers/pagerduty/retry-base-interval":
-				valErr = loadCustomValue(&config.Notifiers.PagerDuty.RetryBaseInterval, val, ConfigTypeInt)
+				valErr = loadCustomValue(&config.Notifiers.PagerDuty.RetryBaseInterval, val, ConfigTypeInt, c.mutexConfig)
 
 				// hipchat notfier config
 			case "consul-alerts/config/notifiers/hipchat/enabled":
-				valErr = loadCustomValue(&config.Notifiers.HipChat.Enabled, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Notifiers.HipChat.Enabled, val, ConfigTypeBool, c.mutexConfig)
 			case "consul-alerts/config/notifiers/hipchat/cluster-name":
-				valErr = loadCustomValue(&config.Notifiers.HipChat.ClusterName, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.HipChat.ClusterName, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/hipchat/room-id":
-				valErr = loadCustomValue(&config.Notifiers.HipChat.RoomId, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.HipChat.RoomId, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/hipchat/auth-token":
-				valErr = loadCustomValue(&config.Notifiers.HipChat.AuthToken, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.HipChat.AuthToken, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/hipchat/base-url":
-				valErr = loadCustomValue(&config.Notifiers.HipChat.BaseURL, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.HipChat.BaseURL, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/hipchat/from":
-				valErr = loadCustomValue(&config.Notifiers.HipChat.From, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.HipChat.From, val, ConfigTypeString, c.mutexConfig)
 
 				// OpsGenie notifier config
 			case "consul-alerts/config/notifiers/opsgenie/enabled":
-				valErr = loadCustomValue(&config.Notifiers.OpsGenie.Enabled, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Notifiers.OpsGenie.Enabled, val, ConfigTypeBool, c.mutexConfig)
 			case "consul-alerts/config/notifiers/opsgenie/cluster-name":
-				valErr = loadCustomValue(&config.Notifiers.OpsGenie.ClusterName, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.OpsGenie.ClusterName, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/opsgenie/api-key":
-				valErr = loadCustomValue(&config.Notifiers.OpsGenie.ApiKey, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.OpsGenie.ApiKey, val, ConfigTypeString, c.mutexConfig)
 
 				// AwsSns notifier config
 			case "consul-alerts/config/notifiers/awssns/cluster-name":
-				valErr = loadCustomValue(&config.Notifiers.AwsSns.ClusterName, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.AwsSns.ClusterName, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/awssns/enabled":
-				valErr = loadCustomValue(&config.Notifiers.AwsSns.Enabled, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Notifiers.AwsSns.Enabled, val, ConfigTypeBool, c.mutexConfig)
 			case "consul-alerts/config/notifiers/awssns/region":
-				valErr = loadCustomValue(&config.Notifiers.AwsSns.Region, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.AwsSns.Region, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/awssns/topic-arn":
-				valErr = loadCustomValue(&config.Notifiers.AwsSns.TopicArn, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.AwsSns.TopicArn, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/awssns/template":
-				valErr = loadCustomValue(&config.Notifiers.AwsSns.Template, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.AwsSns.Template, val, ConfigTypeString, c.mutexConfig)
 
 				// VictorOps notfier config
 			case "consul-alerts/config/notifiers/victorops/enabled":
-				valErr = loadCustomValue(&config.Notifiers.VictorOps.Enabled, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Notifiers.VictorOps.Enabled, val, ConfigTypeBool, c.mutexConfig)
 			case "consul-alerts/config/notifiers/victorops/api-key":
-				valErr = loadCustomValue(&config.Notifiers.VictorOps.APIKey, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.VictorOps.APIKey, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/victorops/routing-key":
-				valErr = loadCustomValue(&config.Notifiers.VictorOps.RoutingKey, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.VictorOps.RoutingKey, val, ConfigTypeString, c.mutexConfig)
 
 			// http endpoint notfier config
 			case "consul-alerts/config/notifiers/http-endpoint/enabled":
-				valErr = loadCustomValue(&config.Notifiers.HttpEndpoint.Enabled, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Notifiers.HttpEndpoint.Enabled, val, ConfigTypeBool, c.mutexConfig)
 			case "consul-alerts/config/notifiers/http-endpoint/cluster-name":
-				valErr = loadCustomValue(&config.Notifiers.HttpEndpoint.ClusterName, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.HttpEndpoint.ClusterName, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/http-endpoint/base-url":
-				valErr = loadCustomValue(&config.Notifiers.HttpEndpoint.BaseURL, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.HttpEndpoint.BaseURL, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/http-endpoint/endpoint":
-				valErr = loadCustomValue(&config.Notifiers.HttpEndpoint.Endpoint, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.HttpEndpoint.Endpoint, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/http-endpoint/payload":
-				valErr = loadCustomValue(&config.Notifiers.HttpEndpoint.Payload, val, ConfigTypeStrMap)
+				valErr = loadCustomValue(&config.Notifiers.HttpEndpoint.Payload, val, ConfigTypeStrMap, c.mutexConfig)
 
 			// iLert notfier config
 			case "consul-alerts/config/notifiers/ilert/enabled":
-				valErr = loadCustomValue(&config.Notifiers.ILert.Enabled, val, ConfigTypeBool)
+				valErr = loadCustomValue(&config.Notifiers.ILert.Enabled, val, ConfigTypeBool, c.mutexConfig)
 			case "consul-alerts/config/notifiers/ilert/api-key":
-				valErr = loadCustomValue(&config.Notifiers.ILert.ApiKey, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.ILert.ApiKey, val, ConfigTypeString, c.mutexConfig)
 			case "consul-alerts/config/notifiers/ilert/incident-key-template":
-				valErr = loadCustomValue(&config.Notifiers.ILert.IncidentKeyTemplate, val, ConfigTypeString)
+				valErr = loadCustomValue(&config.Notifiers.ILert.IncidentKeyTemplate, val, ConfigTypeString, c.mutexConfig)
 			}
 
 			if valErr != nil {
@@ -273,7 +276,10 @@ func (c *ConsulAlertClient) LoadConfig() {
 
 }
 
-func loadCustomValue(configVariable interface{}, data []byte, cType configType) (err error) {
+func loadCustomValue(configVariable interface{}, data []byte, cType configType, mutexConfig *sync.Mutex) (err error) {
+	mutexConfig.Lock()
+	defer mutexConfig.Unlock()
+
 	switch cType {
 	case ConfigTypeBool:
 		var val bool

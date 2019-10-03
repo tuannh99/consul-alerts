@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"syscall"
+	"sync"
 
 	"net/http"
 	"os/signal"
@@ -141,7 +142,8 @@ func daemonMode(arguments map[string]interface{}) {
 		os.Exit(1)
 	}
 
-	consulClient, err = consul.NewClient(consulAddr, consulDc, consulAclToken)
+	var mutexConfig sync.Mutex
+	consulClient, err = consul.NewClient(consulAddr, consulDc, consulAclToken, &mutexConfig)
 	if err != nil {
 		log.Println("Cluster has no leader or is unreacheable.", err)
 		os.Exit(3)
@@ -155,7 +157,7 @@ func daemonMode(arguments map[string]interface{}) {
 	log.Println("Consul Datacenter:", consulDc)
 
 	leaderCandidate := startLeaderElection(consulAddr, consulDc, consulAclToken)
-	notifEngine := startNotifEngine()
+	notifEngine := startNotifEngine(&mutexConfig)
 
 	ep := startEventProcessor()
 	cp := startCheckProcessor(leaderCandidate, notifEngine)
