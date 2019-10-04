@@ -30,10 +30,10 @@ type configType int
 type ConsulAlertClient struct {
 	api         *consulapi.Client
 	config      *ConsulAlertConfig
-	mutexConfig *sync.Mutex
+	mutexConfig *sync.RWMutex
 }
 
-func NewClient(address, dc, aclToken string, mutexConfig *sync.Mutex) (*ConsulAlertClient, error) {
+func NewClient(address, dc, aclToken string, mutexConfig *sync.RWMutex) (*ConsulAlertClient, error) {
 	config := consulapi.DefaultConfig()
 	config.Address = address
 	config.Datacenter = dc
@@ -276,7 +276,7 @@ func (c *ConsulAlertClient) LoadConfig() {
 
 }
 
-func loadCustomValue(configVariable interface{}, data []byte, cType configType, mutexConfig *sync.Mutex) (err error) {
+func loadCustomValue(configVariable interface{}, data []byte, cType configType, mutexConfig *sync.RWMutex) (err error) {
 	mutexConfig.Lock()
 	defer mutexConfig.Unlock()
 

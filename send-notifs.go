@@ -24,7 +24,7 @@ import (
 type NotifEngine struct {
 	inChan      chan notifier.Messages
 	closeChan   chan struct{}
-	mutexConfig *sync.Mutex
+	mutexConfig *sync.RWMutex
 }
 
 func (n *NotifEngine) start() {
@@ -95,8 +95,8 @@ func (n *NotifEngine) sendBuiltin(messages notifier.Messages) {
 
 	for hash, msgs := range messagesPerNotifier {
 		nm := notifierMap[hash]
-		n.mutexConfig.Lock()
-		defer n.mutexConfig.Unlock()
+		n.mutexConfig.RLock()
+		defer n.mutexConfig.RUnlock()
 		nm.Notify(msgs)
 	}
 }
@@ -134,7 +134,7 @@ func (n *NotifEngine) sendCustom(messages notifier.Messages) {
 	}
 }
 
-func startNotifEngine(mutexConfig *sync.Mutex) *NotifEngine {
+func startNotifEngine(mutexConfig *sync.RWMutex) *NotifEngine {
 	notifEngine := &NotifEngine{
 		inChan:      make(chan notifier.Messages),
 		closeChan:   make(chan struct{}),
