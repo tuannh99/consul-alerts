@@ -156,11 +156,11 @@ func daemonMode(arguments map[string]interface{}) {
 	log.Println("Consul Agent:", consulAddr)
 	log.Println("Consul Datacenter:", consulDc)
 
-	leaderCandidate := startLeaderElection(consulAddr, consulDc, consulAclToken)
+	leaderCandidate := startLeaderElection(consulAddr, consulDc, consulAclToken, &mutexConfig)
 	notifEngine := startNotifEngine(&mutexConfig)
 
 	ep := startEventProcessor()
-	cp := startCheckProcessor(leaderCandidate, notifEngine)
+	cp := startCheckProcessor(leaderCandidate, notifEngine, &mutexConfig)
 
 	http.HandleFunc("/v1/info", infoHandler)
 	http.HandleFunc("/v1/process/events", ep.eventHandler)
