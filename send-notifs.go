@@ -53,7 +53,9 @@ func (n *NotifEngine) sendBuiltin(messages notifier.Messages) {
 	log.Println("sendBuiltin running")
 
 	notifierMap := make(map[uint64]notifier.Notifier)
+	n.mutexConfig.RLock()
 	defaultNotifiers := builtinNotifiers()
+	n.mutexConfig.RUnlock()
 	messagesPerNotifier := make(map[uint64]notifier.Messages)
 
 	var hash uint64
