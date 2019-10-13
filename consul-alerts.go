@@ -142,7 +142,7 @@ func daemonMode(arguments map[string]interface{}) {
 		os.Exit(1)
 	}
 
-	var mutexConfig sync.Mutex
+	var mutexConfig sync.RWMutex
 	consulClient, err = consul.NewClient(consulAddr, consulDc, consulAclToken, &mutexConfig)
 	if err != nil {
 		log.Println("Cluster has no leader or is unreacheable.", err)
@@ -156,11 +156,11 @@ func daemonMode(arguments map[string]interface{}) {
 	log.Println("Consul Agent:", consulAddr)
 	log.Println("Consul Datacenter:", consulDc)
 
-	leaderCandidate := startLeaderElection(consulAddr, consulDc, consulAclToken)
+	leaderCandidate := startLeaderElection(consulAddr, consulDc, consulAclToken, &mutexConfig)
 	notifEngine := startNotifEngine(&mutexConfig)
 
 	ep := startEventProcessor()
-	cp := startCheckProcessor(leaderCandidate, notifEngine)
+	cp := startCheckProcessor(leaderCandidate, notifEngine, &mutexConfig)
 
 	http.HandleFunc("/v1/info", infoHandler)
 	http.HandleFunc("/v1/process/events", ep.eventHandler)

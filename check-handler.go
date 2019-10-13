@@ -3,6 +3,7 @@ package main
 import (
 	"math"
 	"time"
+	"sync"
 
 	"net/http"
 
@@ -18,6 +19,7 @@ type CheckProcessor struct {
 	firstRun       bool
 	notifEngine    *NotifEngine
 	leaderElection *LeaderElection
+	mutexConfig    *sync.RWMutex
 }
 
 func (c *CheckProcessor) start() {
@@ -50,6 +52,8 @@ func (c *CheckProcessor) reminderStart() {
 }
 
 func (c *CheckProcessor) reminderRun() {
+	c.mutexConfig.RLock()
+	defer c.mutexConfig.RUnlock()
 	if !c.leaderElection.leader {
 		log.Println("Currently not the leader. Ignoring reminders.")
 		return
@@ -100,6 +104,8 @@ func (c *CheckProcessor) handleChecks(checks []consul.Check) {
 		retryCount++
 	}
 
+	c.mutexConfig.RLock()
+	defer c.mutexConfig.RUnlock()
 	if !c.leaderElection.leader {
 		log.Println("Currently not the leader. Ignoring checks.")
 		return
@@ -157,13 +163,14 @@ func (c *CheckProcessor) notify(alerts []consul.Check) {
 	c.notifEngine.queueMessages(messages)
 }
 
-func startCheckProcessor(leaderCandidate *LeaderElection, notifEngine *NotifEngine) *CheckProcessor {
+func startCheckProcessor(leaderCandidate *LeaderElection, notifEngine *NotifEngine, mutexConfig *sync.RWMutex) *CheckProcessor {
 	cp := &CheckProcessor{
 		inChan:         make(chan []consul.Check, 1),
 		closeChan:      make(chan struct{}),
 		firstRun:       true,
 		notifEngine:    notifEngine,
 		leaderElection: leaderCandidate,
+		mutexConfig:    mutexConfig,
 	}
 	go cp.start()
 	go cp.reminderStart()

@@ -24,7 +24,7 @@ import (
 type NotifEngine struct {
 	inChan      chan notifier.Messages
 	closeChan   chan struct{}
-	mutexConfig *sync.Mutex
+	mutexConfig *sync.RWMutex
 }
 
 func (n *NotifEngine) start() {
@@ -75,9 +75,9 @@ func (n *NotifEngine) sendBuiltin(messages notifier.Messages) {
 		for notifName, enabled := range m.NotifList {
 			// get the default notifier
 			if defaultNotifier, defaultNotifierExists := defaultNotifiers[notifName]; defaultNotifierExists && enabled {
-				n.mutexConfig.Lock()
+				n.mutexConfig.RLock()
 				notif := defaultNotifier.Copy()
-				n.mutexConfig.Unlock()
+				n.mutexConfig.RUnlock()
 				if varOverride, varOverrideExists := m.VarOverrides.GetNotifier(notifName); varOverrideExists {
 					err = mergo.MergeWithOverwrite(notif, varOverride)
 					if err != nil {
@@ -97,9 +97,9 @@ func (n *NotifEngine) sendBuiltin(messages notifier.Messages) {
 
 	for hash, msgs := range messagesPerNotifier {
 		nm := notifierMap[hash]
-		n.mutexConfig.Lock()
+		n.mutexConfig.RLock()
 		nm.Notify(msgs)
-		n.mutexConfig.Unlock()
+		n.mutexConfig.RUnlock()
 	}
 }
 
@@ -136,7 +136,7 @@ func (n *NotifEngine) sendCustom(messages notifier.Messages) {
 	}
 }
 
-func startNotifEngine(mutexConfig *sync.Mutex) *NotifEngine {
+func startNotifEngine(mutexConfig *sync.RWMutex) *NotifEngine {
 	notifEngine := &NotifEngine{
 		inChan:      make(chan notifier.Messages),
 		closeChan:   make(chan struct{}),
